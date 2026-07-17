@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AgriDrone – Smart Farm Spraying</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Noto+Sans+Telugu:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a1a0d;--bg2:#0f2412;--bg3:#122b15;
+  --green:#2ecc71;--green2:#27ae60;--green3:#1e8449;
+  --lime:#a8e063;--lime2:#c6f135;
+  --amber:#f39c12;--red:#e74c3c;--blue:#3498db;
+  --text:#e8f5e9;--text2:#a5d6a7;--text3:#66bb6a;
+  --card:#0d1f10;--card2:#112614;
+  --border:#1e4d23;--border2:#2a6b30;
+  --shadow:0 4px 24px #00000080;
+  --font:'Rajdhani',sans-serif;
+  --mono:'Share Tech Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden;}
+
+/* ── BACKGROUND TEXTURE ── */
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse 80% 60% at 20% 80%,#0d3b1540,transparent),
+  radial-gradient(ellipse 60% 80% at 80% 20%,#1a4d2040,transparent);
+  pointer-events:none;z-index:0;}
+
+/* ── LAYOUT ── */
+#app{display:flex;min-height:100vh;position:relative;z-index:1;}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:220px;min-width:220px;background:var(--card);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:0;
+  padding:0 0 16px 0;position:sticky;top:0;height:100vh;overflow:auto;
+}
+.sb-logo{
+  padding:18px 16px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.sb-logo .icon{font-size:28px;}
+.sb-logo .brand{font-size:18px;font-weight:700;color:var(--lime2);letter-spacing:1px;}
+.sb-logo .sub{font-size:11px;color:var(--text3);letter-spacing:2px;}
+
+.sb-section{padding:12px 16px 8px;font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;}
+
+/* Language */
+.lang-btns{display:flex;flex-direction:column;gap:6px;padding:0 16px;}
+.lang-btn{
+  background:var(--card2);border:1px solid var(--border);
+  color:var(--text2);padding:8px 12px;border-radius:6px;
+  font-family:var(--font);font-size:14px;font-weight:600;
+  cursor:pointer;text-align:left;transition:.2s;
+}
+.lang-btn.active,.lang-btn:hover{background:var(--green3);border-color:var(--green);color:#fff;}
+
+/* Battery */
+.sb-battery{padding:12px 16px;}
+.bat-label{font-size:12px;color:var(--text3);margin-bottom:6px;display:flex;justify-content:space-between;}
+.bat-bar-wrap{background:#0a150b;border:1px solid var(--border);border-radius:4px;height:16px;overflow:hidden;}
+.bat-bar{height:100%;background:linear-gradient(90deg,var(--green2),var(--lime));transition:width .5s;border-radius:3px;}
+
+/* Signal */
+.sb-signal{padding:4px 16px 8px;}
+.sig-bars{display:flex;align-items:flex-end;gap:3px;height:20px;}
+.sig-bar{width:8px;background:var(--border2);border-radius:2px 2px 0 0;}
+.sig-bar.on{background:var(--green);}
+
+/* Status dots */
+.sb-status{padding:0 16px;}
+.status-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--text2);}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot-ok{background:var(--green);box-shadow:0 0 6px var(--green);}
+.dot-warn{background:var(--amber);box-shadow:0 0 6px var(--amber);}
+.dot-off{background:#333;}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;padding:24px;gap:20px;max-width:100%;}
+
+/* ── SCREEN SWITCHER ── */
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* ── SETUP SCREEN ── */
+.setup-title{font-size:28px;font-weight:700;color:var(--lime2);letter-spacing:1px;margin-bottom:4px;}
+.setup-sub{font-size:14px;color:var(--text3);margin-bottom:20px;}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.form-grid{grid-template-columns:1fr;}}
+
+.form-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:16px;
+}
+.form-card h3{font-size:13px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+label{font-size:14px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600;}
+select,input[type=number],input[type=text]{
+  width:100%;background:#0a150b;border:1px solid var(--border);
+  color:var(--text);padding:10px 12px;border-radius:8px;
+  font-family:var(--font);font-size:15px;outline:none;
+  transition:.2s;
+}
+select:focus,input:focus{border-color:var(--green);box-shadow:0 0 0 2px #2ecc7130;}
+select option{background:#0f2412;}
+
+/* Calc output */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;}
+.calc-item{background:#0a150b;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
+.calc-val{font-family:var(--mono);font-size:18px;color:var(--lime2);font-weight:700;}
+.calc-label{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* Canvas */
+.canvas-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#071209;position:relative;}
+.canvas-tools{display:flex;gap:8px;margin-bottom:8px;}
+.tool-btn{
+  background:var(--card2);border:1px solid var(--border);
+  color:var(--text2);padding:6px 14px;border-radius:6px;
+  font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:.2s;
+}
+.tool-btn.active,.tool-btn:hover{background:var(--green3);border-color:var(--green);color:#fff;}
+canvas{display:block;width:100%;cursor:crosshair;}
+
+/* Initiate button */
+.initiate-wrap{text-align:center;margin-top:8px;}
+.btn-initiate{
+  background:linear-gradient(135deg,var(--green2),var(--green3));
+  border:none;color:#fff;font-family:var(--font);font-size:20px;font-weight:700;
+  padding:16px 48px;border-radius:12px;cursor:pointer;letter-spacing:2px;
+  box-shadow:0 4px 24px #2ecc7150;transition:.2s;text-transform:uppercase;
+}
+.btn-initiate:hover{transform:translateY(-2px);box-shadow:0 8px 32px #2ecc7170;}
+
+/* ── LIVE SCREEN ── */
+.live-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.live-title{font-size:24px;font-weight:700;color:var(--lime2);letter-spacing:1px;}
+.mission-badge{background:var(--green3);color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:2px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #2ecc7150;}50%{box-shadow:0 0 0 8px #2ecc7100;}}
+
+/* Metric cards */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+@media(max-width:800px){.metrics{grid-template-columns:repeat(2,1fr);}}
+.metric-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:14px;position:relative;overflow:hidden;
+}
+.metric-card::after{content:'';position:absolute;top:0;right:0;width:60%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--green));}
+.metric-icon{font-size:22px;margin-bottom:6px;}
+.metric-val{font-family:var(--mono);font-size:26px;color:var(--lime2);font-weight:700;line-height:1;}
+.metric-unit{font-size:12px;color:var(--text3);margin-bottom:6px;}
+.metric-label{font-size:12px;color:var(--text3);margin-top:2px;}
+.mini-bar{height:4px;background:#0a150b;border-radius:2px;margin-top:6px;}
+.mini-fill{height:100%;border-radius:2px;transition:width .5s;}
+.fill-green{background:linear-gradient(90deg,var(--green2),var(--lime));}
+.fill-blue{background:linear-gradient(90deg,var(--blue),#74b9ff);}
+.fill-amber{background:linear-gradient(90deg,var(--amber),#ffeaa7);}
+
+/* Map + Telemetry row */
+.map-tele{display:grid;grid-template-columns:1fr 320px;gap:12px;margin-bottom:16px;}
+@media(max-width:900px){.map-tele{grid-template-columns:1fr;}}
+
+.map-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.map-card h3{font-size:12px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.map-canvas-wrap{background:#071209;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+
+.tele-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.tele-card h3{font-size:12px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.tele-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);}
+.tele-row:last-child{border:none;}
+.tele-key{font-size:13px;color:var(--text3);}
+.tele-val{font-family:var(--mono);font-size:14px;color:var(--lime2);}
+
+/* Log */
+.log-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;max-height:180px;overflow-y:auto;}
+.log-card h3{font-size:12px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.log-entry{font-family:var(--mono);font-size:12px;padding:4px 0;border-bottom:1px solid #1a2e1c;display:flex;gap:10px;}
+.log-time{color:var(--text3);flex-shrink:0;}
+.log-msg.ok{color:var(--green);}
+.log-msg.warn{color:var(--amber);}
+.log-msg.err{color:var(--red);}
+
+/* Control buttons */
+.ctrl-btns{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;}
+.btn-ctrl{
+  flex:1;min-width:100px;border:none;font-family:var(--font);
+  font-size:16px;font-weight:700;padding:12px;border-radius:10px;
+  cursor:pointer;letter-spacing:1px;transition:.2s;
+}
+.btn-pause{background:var(--amber);color:#1a1a00;}
+.btn-stop{background:var(--red);color:#fff;}
+.btn-new{background:var(--border2);color:var(--text);border:1px solid var(--border);}
+.btn-ctrl:hover{opacity:.85;transform:translateY(-1px);}
+
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="icon">🌿</div>
+    <div><div class="brand" data-i="brand">AgriDrone</div><div class="sub" data-i="sub">SMART FARM</div></div>
+  </div>
+
+  <div class="sb-section" data-i="language">Language</div>
+  <div class="lang-btns">
+    <button class="lang-btn active" onclick="setLang('en')">🇬🇧 English</button>
+    <button class="lang-btn" onclick="setLang('te')">🇮🇳 తెలుగు</button>
+    <button class="lang-btn" onclick="setLang('hi')">🇮🇳 हिंदी</button>
+  </div>
+
+  <div class="sb-section" data-i="battery">Battery</div>
+  <div class="sb-battery">
+    <div class="bat-label"><span data-i="batLevel">Charge Level</span><span id="batPct">82%</span></div>
+    <div class="bat-bar-wrap"><div class="bat-bar" id="batBar" style="width:82%"></div></div>
+  </div>
+
+  <div class="sb-section" data-i="signal">Signal</div>
+  <div class="sb-signal">
+    <div class="sig-bars">
+      <div class="sig-bar on" style="height:6px"></div>
+      <div class="sig-bar on" style="height:10px"></div>
+      <div class="sig-bar on" style="height:14px"></div>
+      <div class="sig-bar on" style="height:18px"></div>
+      <div class="sig-bar" style="height:20px"></div>
+    </div>
+  </div>
+
+  <div class="sb-section" data-i="systems">Systems</div>
+  <div class="sb-status">
+    <div class="status-row"><div class="status-dot dot-ok"></div><span data-i="gps">GPS Lock</span></div>
+    <div class="status-row"><div class="status-dot dot-ok"></div><span data-i="pump">Pump</span></div>
+    <div class="status-row"><div class="status-dot dot-ok"></div><span data-i="motor">Motors</span></div>
+    <div class="status-row"><div class="status-dot dot-warn"></div><span data-i="cam">Camera</span></div>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main id="main">
+
+  <!-- ─── SETUP SCREEN ─── -->
+  <div class="screen active" id="setupScreen">
+    <div class="setup-title" data-i="appTitle">🌾 Crop Mission Setup</div>
+    <div class="setup-sub" data-i="appSub">Enter field details — the drone will handle the rest.</div>
+
+    <div class="form-grid">
+
+      <!-- Crop -->
+      <div class="form-card">
+        <h3 data-i="cropInfo">Crop Information</h3>
+        <label data-i="cropType">Crop Type</label>
+        <select id="cropSel" onchange="recalc()">
+          <option value="rice">🌾 Rice / వరి / चावल</option>
+          <option value="wheat">🌿 Wheat / గోధుమ / गेहूँ</option>
+          <option value="cotton">🪴 Cotton / పత్తి / कपास</option>
+          <option value="sugarcane">🎋 Sugarcane / చెరకు / गन्ना</option>
+          <option value="maize">🌽 Maize / మొక్కజొన్న / मक्का</option>
+          <option value="chilli">🌶️ Chilli / మిర్చి / मिर्च</option>
+        </select>
+
+        <label style="margin-top:12px" data-i="growth">Growth Stage</label>
+        <select id="stageSel" onchange="recalc()">
+          <option value="seed" data-i="seed">Seedling</option>
+          <option value="veg" data-i="veg">Vegetative</option>
+          <option value="flower" data-i="flower">Flowering</option>
+          <option value="harvest" data-i="harvest">Pre-Harvest</option>
+        </select>
+
+        <label style="margin-top:12px" data-i="fertType">Fertilizer Type</label>
+        <select id="fertSel" onchange="recalc()">
+          <option value="urea">Urea</option>
+          <option value="dap">DAP</option>
+          <option value="npk">NPK</option>
+          <option value="micro">Micronutrient Mix</option>
+        </select>
+      </div>
+
+      <!-- Field -->
+      <div class="form-card">
+        <h3 data-i="fieldInfo">Field Information</h3>
+        <label data-i="area">Field Area (sq. ft)</label>
+        <input type="number" id="areaInput" value="5000" min="100" max="500000" onchange="recalc()"/>
+
+        <div class="calc-grid" style="margin-top:16px">
+          <div class="calc-item">
+            <div class="calc-val" id="calcFert">12.5</div>
+            <div class="calc-label" data-i="fertLiters">Fertilizer (L)</div>
+          </div>
+          <div class="calc-item">
+            <div class="calc-val" id="calcTime">18</div>
+            <div class="calc-label" data-i="minsLabel">Minutes</div>
+          </div>
+          <div class="calc-item">
+            <div class="calc-val" id="calcPasses">8</div>
+            <div class="calc-label" data-i="passesLabel">Passes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas -->
+      <div class="form-card" style="grid-column:1/-1">
+        <h3 data-i="fieldShape">Field Shape (Optional)</h3>
+        <div class="canvas-tools">
+          <button class="tool-btn active" id="penBtn" onclick="setTool('pen')" data-i="pen">✏️ Pen</button>
+          <button class="tool-btn" id="rectBtn" onclick="setTool('rect')" data-i="rect">⬜ Rectangle</button>
+          <button class="tool-btn" onclick="clearCanvas()" data-i="clear">🗑️ Clear</button>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="fieldCanvas" height="180"></canvas>
+        </div>
+      </div>
+
+    </div><!-- /form-grid -->
+
+    <div class="initiate-wrap">
+      <button class="btn-initiate" onclick="startMission()" data-i="initiate">🚀 Initiate Mission</button>
+    </div>
+  </div>
+
+  <!-- ─── LIVE SCREEN ─── -->
+  <div class="screen" id="liveScreen">
+    <div class="live-header">
+      <div class="live-title" data-i="liveTitle">🛸 Live Mission</div>
+      <div class="mission-badge" data-i="missionActive">● MISSION ACTIVE</div>
+    </div>
+
+    <!-- Metric cards -->
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-icon">🔋</div>
+        <div class="metric-val" id="liveBat">82</div>
+        <div class="metric-unit">%</div>
+        <div class="metric-label" data-i="mBattery">Battery</div>
+        <div class="mini-bar"><div class="mini-fill fill-green" id="mBatFill" style="width:82%"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">💧</div>
+        <div class="metric-val" id="liveWater">100</div>
+        <div class="metric-unit">%</div>
+        <div class="metric-label" data-i="mWater">Water Tank</div>
+        <div class="mini-bar"><div class="mini-fill fill-blue" id="mWaterFill" style="width:100%"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">⏱️</div>
+        <div class="metric-val" id="liveTime">18:00</div>
+        <div class="metric-unit" data-i="minsLeft">min</div>
+        <div class="metric-label" data-i="mTime">Time Left</div>
+        <div class="mini-bar"><div class="mini-fill fill-amber" id="mTimeFill" style="width:100%"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">🌿</div>
+        <div class="metric-val" id="liveArea">0</div>
+        <div class="metric-unit">%</div>
+        <div class="metric-label" data-i="mArea">Area Done</div>
+        <div class="mini-bar"><div class="mini-fill fill-green" id="mAreaFill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Map + Telemetry -->
+    <div class="map-tele">
+      <div class="map-card">
+        <h3 data-i="gpsMap">GPS Field Map</h3>
+        <div class="map-canvas-wrap">
+          <canvas id="mapCanvas" height="200" style="width:100%;display:block;"></canvas>
+        </div>
+      </div>
+      <div class="tele-card">
+        <h3 data-i="telemetry">Live Telemetry</h3>
+        <div class="tele-row"><span class="tele-key" data-i="altitude">Altitude</span><span class="tele-val" id="tAlt">15.2 m</span></div>
+        <div class="tele-row"><span class="tele-key" data-i="speed">Speed</span><span class="tele-val" id="tSpd">4.8 m/s</span></div>
+        <div class="tele-row"><span class="tele-key" data-i="spray">Spray Rate</span><span class="tele-val" id="tSpray">1.2 L/min</span></div>
+        <div class="tele-row"><span class="tele-key" data-i="wind">Wind</span><span class="tele-val" id="tWind">3.1 km/h</span></div>
+        <div class="tele-row"><span class="tele-key" data-i="gpsAcc">GPS Acc.</span><span class="tele-val" id="tGps">±0.3 m</span></div>
+        <div class="tele-row"><span class="tele-key" data-i="temp">Temp</span><span class="tele-val" id="tTemp">32.1°C</span></div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="log-card" id="logCard">
+      <h3 data-i="missionLog">Mission Log</h3>
+      <div id="logEntries"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="ctrl-btns">
+      <button class="btn-ctrl btn-pause" id="pauseBtn" onclick="togglePause()" data-i="pause">⏸ Pause</button>
+      <button class="btn-ctrl btn-stop" onclick="stopMission()" data-i="stop">⏹ Stop</button>
+      <button class="btn-ctrl btn-new" onclick="newMission()" data-i="newMission">＋ New Mission</button>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// TRANSLATIONS
+// ═══════════════════════════════════════════
+const T={
+  en:{
+    brand:'AgriDrone',sub:'SMART FARM',language:'Language',battery:'Battery',
+    batLevel:'Charge Level',signal:'Signal',systems:'Systems',
+    gps:'GPS Lock',pump:'Pump',motor:'Motors',cam:'Camera',
+    appTitle:'🌾 Crop Mission Setup',appSub:'Enter field details — the drone will handle the rest.',
+    cropInfo:'Crop Information',cropType:'Crop Type',growth:'Growth Stage',
+    seed:'Seedling',veg:'Vegetative',flower:'Flowering',harvest:'Pre-Harvest',
+    fertType:'Fertilizer Type',fieldInfo:'Field Information',area:'Field Area (sq. ft)',
+    fertLiters:'Fertilizer (L)',minsLabel:'Minutes',passesLabel:'Passes',
+    fieldShape:'Field Shape (Optional)',pen:'✏️ Pen',rect:'⬜ Rectangle',clear:'🗑️ Clear',
+    initiate:'🚀 Initiate Mission',liveTitle:'🛸 Live Mission',missionActive:'● MISSION ACTIVE',
+    mBattery:'Battery',mWater:'Water Tank',mTime:'Time Left',mArea:'Area Done',minsLeft:'min',
+    gpsMap:'GPS Field Map',telemetry:'Live Telemetry',altitude:'Altitude',speed:'Speed',
+    spray:'Spray Rate',wind:'Wind',gpsAcc:'GPS Acc.',temp:'Temp',
+    missionLog:'Mission Log',pause:'⏸ Pause',resume:'▶ Resume',stop:'⏹ Stop',newMission:'＋ New Mission',
+  },
+  te:{
+    brand:'అగ్రి డ్రోన్',sub:'స్మార్ట్ ఫార్మ్',language:'భాష',battery:'బ్యాటరీ',
+    batLevel:'చార్జ్ స్థాయి',signal:'సిగ్నల్',systems:'వ్యవస్థలు',
+    gps:'GPS లాక్',pump:'పంప్',motor:'మోటార్లు',cam:'కెమెరా',
+    appTitle:'🌾 పంట మిషన్ సెటప్',appSub:'పొలం వివరాలు నమోదు చేయండి.',
+    cropInfo:'పంట సమాచారం',cropType:'పంట రకం',growth:'పెరుగుదల దశ',
+    seed:'మొలక',veg:'వృద్ధి',flower:'పుష్పించడం',harvest:'పంట కోత',
+    fertType:'ఎరువు రకం',fieldInfo:'పొలం సమాచారం',area:'పొలం విస్తీర్ణం (చ.అ.)',
+    fertLiters:'ఎరువు (L)',minsLabel:'నిమిషాలు',passesLabel:'పాస్‌లు',
+    fieldShape:'పొలం ఆకారం (ఐచ్ఛికం)',pen:'✏️ పెన్',rect:'⬜ దీర్ఘచతురస్రం',clear:'🗑️ తుడువు',
+    initiate:'🚀 మిషన్ ప్రారంభించు',liveTitle:'🛸 లైవ్ మిషన్',missionActive:'● మిషన్ జరుగుచున్నది',
+    mBattery:'బ్యాటరీ',mWater:'నీటి ట్యాంక్',mTime:'మిగిలిన సమయం',mArea:'పూర్తయిన విస్తీర్ణం',minsLeft:'నిమి',
+    gpsMap:'GPS పొలం మ్యాప్',telemetry:'లైవ్ టెలిమెట్రీ',altitude:'ఎత్తు',speed:'వేగం',
+    spray:'స్ప్రే రేట్',wind:'గాలి',gpsAcc:'GPS ఖచ్చితత్వం',temp:'ఉష్ణోగ్రత',
+    missionLog:'మిషన్ లాగ్',pause:'⏸ పాజ్',resume:'▶ కొనసాగించు',stop:'⏹ ఆపు',newMission:'＋ కొత్త మిషన్',
+  },
+  hi:{
+    brand:'एग्री ड्रोन',sub:'स्मार्ट फार्म',language:'भाषा',battery:'बैटरी',
+    batLevel:'चार्ज स्तर',signal:'सिग्नल',systems:'सिस्टम',
+    gps:'GPS लॉक',pump:'पंप',motor:'मोटर',cam:'कैमरा',
+    appTitle:'🌾 फसल मिशन सेटअप',appSub:'खेत की जानकारी दर्ज करें।',
+    cropInfo:'फसल जानकारी',cropType:'फसल प्रकार',growth:'विकास अवस्था',
+    seed:'अंकुर',veg:'वनस्पति',flower:'फूल',harvest:'कटाई',
+    fertType:'उर्वरक प्रकार',fieldInfo:'खेत जानकारी',area:'खेत क्षेत्र (वर्ग फुट)',
+    fertLiters:'उर्वरक (L)',minsLabel:'मिनट',passesLabel:'पास',
+    fieldShape:'खेत का आकार (वैकल्पिक)',pen:'✏️ पेन',rect:'⬜ आयत',clear:'🗑️ साफ़',
+    initiate:'🚀 मिशन शुरू करें',liveTitle:'🛸 लाइव मिशन',missionActive:'● मिशन सक्रिय',
+    mBattery:'बैटरी',mWater:'पानी टैंक',mTime:'शेष समय',mArea:'पूर्ण क्षेत्र',minsLeft:'मिनट',
+    gpsMap:'GPS खेत मानचित्र',telemetry:'लाइव टेलीमेट्री',altitude:'ऊँचाई',speed:'गति',
+    spray:'स्प्रे दर',wind:'हवा',gpsAcc:'GPS सटीकता',temp:'तापमान',
+    missionLog:'मिशन लॉग',pause:'⏸ रोकें',resume:'▶ जारी रखें',stop:'⏹ बंद करें',newMission:'＋ नया मिशन',
+  }
+};
+let lang='en';
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach((b,i)=>b.classList.toggle('active',['en','te','hi'][i]===l));
+  document.querySelectorAll('[data-i]').forEach(el=>{
+    const key=el.getAttribute('data-i');
+    if(T[l][key])el.textContent=T[l][key];
+  });
+}
+
+// ═══════════════════════════════════════════
+// FERTILIZER CALCULATOR
+// ═══════════════════════════════════════════
+const FERT_RATE={rice:2.5,wheat:2.0,cotton:3.0,sugarcane:3.5,maize:2.2,chilli:2.8};
+const STAGE_MUL={seed:0.6,veg:1.0,flower:1.2,harvest:0.8};
+function recalc(){
+  const area=parseFloat(document.getElementById('areaInput').value)||0;
+  const crop=document.getElementById('cropSel').value;
+  const stage=document.getElementById('stageSel').value;
+  const sqm=area*0.0929;
+  const rate=(FERT_RATE[crop]||2.5)*STAGE_MUL[stage];
+  const fert=+(sqm*rate/1000).toFixed(1);
+  const passes=Math.max(4,Math.ceil(sqm/500));
+  const mins=Math.ceil(passes*2.5);
+  document.getElementById('calcFert').textContent=fert;
+  document.getElementById('calcTime').textContent=mins;
+  document.getElementById('calcPasses').textContent=passes;
+  window._missionFert=fert;window._missionMins=mins;window._missionPasses=passes;
+}
+recalc();
+
+// ═══════════════════════════════════════════
+// FIELD CANVAS
+// ═══════════════════════════════════════════
+const fieldCanvas=document.getElementById('fieldCanvas');
+const fctx=fieldCanvas.getContext('2d');
+let tool='pen',drawing=false,rectStart=null,snapshot=null;
+function resizeFieldCanvas(){
+  fieldCanvas.width=fieldCanvas.offsetWidth;
+  fctx.strokeStyle='#2ecc71';fctx.lineWidth=2;fctx.lineCap='round';
+}
+window.addEventListener('resize',resizeFieldCanvas);
+resizeFieldCanvas();
+fieldCanvas.addEventListener('mousedown',e=>{
+  drawing=true;
+  const{x,y}=pos(e);
+  if(tool==='pen'){fctx.beginPath();fctx.moveTo(x,y);}
+  else{rectStart={x,y};snapshot=fctx.getImageData(0,0,fieldCanvas.width,fieldCanvas.height);}
+});
+fieldCanvas.addEventListener('mousemove',e=>{
+  if(!drawing)return;
+  const{x,y}=pos(e);
+  if(tool==='pen'){fctx.lineTo(x,y);fctx.stroke();}
+  else{
+    fctx.putImageData(snapshot,0,0);
+    fctx.strokeStyle='#2ecc71';fctx.lineWidth=2;
+    fctx.strokeRect(rectStart.x,rectStart.y,x-rectStart.x,y-rectStart.y);
+  }
+});
+fieldCanvas.addEventListener('mouseup',()=>drawing=false);
+fieldCanvas.addEventListener('mouseleave',()=>drawing=false);
+// Touch
+fieldCanvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const{x,y}=posT(e);if(tool==='pen'){fctx.beginPath();fctx.moveTo(x,y);}else{rectStart={x,y};snapshot=fctx.getImageData(0,0,fieldCanvas.width,fieldCanvas.height);}});
+fieldCanvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const{x,y}=posT(e);if(tool==='pen'){fctx.lineTo(x,y);fctx.stroke();}else{fctx.putImageData(snapshot,0,0);fctx.strokeStyle='#2ecc71';fctx.lineWidth=2;fctx.strokeRect(rectStart.x,rectStart.y,x-rectStart.x,y-rectStart.y);}});
+fieldCanvas.addEventListener('touchend',()=>drawing=false);
+function pos(e){const r=fieldCanvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+function posT(e){const r=fieldCanvas.getBoundingClientRect();const t=e.touches[0];return{x:t.clientX-r.left,y:t.clientY-r.top};}
+function setTool(t){
+  tool=t;
+  document.getElementById('penBtn').classList.toggle('active',t==='pen');
+  document.getElementById('rectBtn').classList.toggle('active',t==='rect');
+}
+function clearCanvas(){fctx.clearRect(0,0,fieldCanvas.width,fieldCanvas.height);}
+
+// ═══════════════════════════════════════════
+// MISSION STATE
+// ═══════════════════════════════════════════
+let paused=false,missionInterval=null;
+let bat=82,water=100,timeLeft=0,areaDone=0,totalTime=0;
+const mapCanvas=document.getElementById('mapCanvas');
+const mctx=mapCanvas.getContext('2d');
+let droneX=0,droneY=0,droneRow=0,droneDir=1;
+
+function startMission(){
+  recalc();
+  bat=82;water=100;areaDone=0;paused=false;
+  totalTime=(window._missionMins||18)*60;
+  timeLeft=totalTime;
+  droneX=0;droneY=0;droneRow=0;droneDir=1;
+  document.getElementById('logEntries').innerHTML='';
+  document.getElementById('setupScreen').classList.remove('active');
+  document.getElementById('liveScreen').classList.add('active');
+  addLog('Mission started','ok');
+  addLog('GPS locked — 8 satellites','ok');
+  addLog('Pump primed — pressure OK','ok');
+  resizeMapCanvas();
+  if(missionInterval)clearInterval(missionInterval);
+  missionInterval=setInterval(tick,1000);
+}
+
+function resizeMapCanvas(){
+  mapCanvas.width=mapCanvas.offsetWidth||600;
+  mapCanvas.height=200;
+}
+window.addEventListener('resize',resizeMapCanvas);
+
+function tick(){
+  if(paused)return;
+  bat=Math.max(0,bat-0.04);
+  water=Math.max(0,water-0.09);
+  timeLeft=Math.max(0,timeLeft-1);
+  areaDone=Math.min(100,areaDone+(100/(totalTime||1080)));
+
+  // update cards
+  document.getElementById('liveBat').textContent=bat.toFixed(0);
+  document.getElementById('liveWater').textContent=water.toFixed(0);
+  const m=Math.floor(timeLeft/60),s=timeLeft%60;
+  document.getElementById('liveTime').textContent=`${m}:${String(s).padStart(2,'0')}`;
+  document.getElementById('liveArea').textContent=areaDone.toFixed(0);
+  document.getElementById('mBatFill').style.width=bat+'%';
+  document.getElementById('mWaterFill').style.width=water+'%';
+  document.getElementById('mTimeFill').style.width=(timeLeft/totalTime*100)+'%';
+  document.getElementById('mAreaFill').style.width=areaDone+'%';
+
+  // sidebar battery
+  document.getElementById('batPct').textContent=bat.toFixed(0)+'%';
+  document.getElementById('batBar').style.width=bat+'%';
+
+  // telemetry flicker
+  document.getElementById('tAlt').textContent=(14.8+Math.random()*1).toFixed(1)+' m';
+  document.getElementById('tSpd').textContent=(4.5+Math.random()*.6).toFixed(1)+' m/s';
+  document.getElementById('tSpray').textContent=(1.1+Math.random()*.2).toFixed(2)+' L/min';
+  document.getElementById('tWind').textContent=(2.8+Math.random()*.8).toFixed(1)+' km/h';
+  document.getElementById('tGps').textContent='±'+(0.2+Math.random()*.2).toFixed(1)+' m';
+  document.getElementById('tTemp').textContent=(31+Math.random()*2).toFixed(1)+'°C';
+
+  // drone map
+  drawMap();
+
+  // log events
+  if(Math.random()<0.05){
+    const msgs=[
+      ['Row '+(droneRow+1)+' complete','ok'],
+      ['Spray rate stable','ok'],
+      ['Wind gust — adjusting altitude','warn'],
+      ['GPS signal strong','ok'],
+    ];
+    const m=msgs[Math.floor(Math.random()*msgs.length)];
+    addLog(m[0],m[1]);
+  }
+  if(bat<20&&Math.random()<0.1)addLog('Low battery warning!','warn');
+  if(water<15&&Math.random()<0.1)addLog('Water tank low','warn');
+  if(timeLeft===0){addLog('Mission complete!','ok');clearInterval(missionInterval);}
+}
+
+function drawMap(){
+  const W=mapCanvas.width,H=mapCanvas.height;
+  mctx.clearRect(0,0,W,H);
+  // field bg
+  mctx.fillStyle='#071209';mctx.fillRect(0,0,W,H);
+  mctx.strokeStyle='#1e4d23';mctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){mctx.beginPath();mctx.moveTo(x,0);mctx.lineTo(x,H);mctx.stroke();}
+  for(let y=0;y<H;y+=40){mctx.beginPath();mctx.moveTo(0,y);mctx.lineTo(W,y);mctx.stroke();}
+  // field outline
+  mctx.strokeStyle='#2ecc71';mctx.lineWidth=2;
+  mctx.strokeRect(20,20,W-40,H-40);
+  // rows done
+  const rows=8;const rowH=(H-40)/rows;
+  for(let r=0;r<droneRow;r++){
+    mctx.fillStyle='#1e8449'+(Math.floor(80).toString(16));
+    mctx.fillRect(21,20+r*rowH,W-42,rowH);
+  }
+  // drone path
+  const nx=droneDir===1?areaDone/100*(W-40)+20:W-20-(areaDone/100*(W-40));
+  const ny=20+(droneRow+0.5)*rowH;
+  if(ny>H-20)droneRow++;
+  droneDir*=-1;
+  // drone dot
+  mctx.beginPath();mctx.arc(nx,ny,7,0,Math.PI*2);
+  mctx.fillStyle='#c6f135';mctx.fill();
+  mctx.beginPath();mctx.arc(nx,ny,12,0,Math.PI*2);
+  mctx.strokeStyle='#c6f13560';mctx.lineWidth=2;mctx.stroke();
+}
+
+function addLog(msg,type){
+  const now=new Date();
+  const ts=now.toTimeString().slice(0,8);
+  const el=document.createElement('div');
+  el.className='log-entry';
+  el.innerHTML=`<span class="log-time">${ts}</span><span class="log-msg ${type}">${msg}</span>`;
+  const entries=document.getElementById('logEntries');
+  entries.prepend(el);
+  if(entries.children.length>30)entries.lastChild.remove();
+}
+
+function togglePause(){
+  paused=!paused;
+  const btn=document.getElementById('pauseBtn');
+  const k=paused?'resume':'pause';
+  btn.textContent=T[lang][k];
+  addLog(paused?'Mission paused':'Mission resumed',paused?'warn':'ok');
+}
+
+function stopMission(){
+  clearInterval(missionInterval);
+  addLog('Mission aborted by operator','err');
+  setTimeout(()=>{
+    document.getElementById('liveScreen').classList.remove('active');
+    document.getElementById('setupScreen').classList.add('active');
+  },1500);
+}
+
+function newMission(){
+  clearInterval(missionInterval);
+  document.getElementById('liveScreen').classList.remove('active');
+  document.getElementById('setupScreen').classList.add('active');
+}
+</script>
+</body>
+</html>
